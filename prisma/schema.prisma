@@ -1,0 +1,317 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  phone     String?
+  role      UserRole @default(OWNER)
+  status    UserStatus @default(ACTIVE)
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lastLogin DateTime?
+
+  // Relations
+  apartments        Apartment[]
+  bills            Bill[]
+  expenses         Expense[]
+  maintenanceRequests MaintenanceRequest[]
+  announcements    Announcement[]
+  meetingAttendances MeetingAttendance[]
+  votes            Vote[]
+  notifications    Notification[]
+
+  @@map("users")
+}
+
+model Apartment {
+  id       String @id @default(cuid())
+  number   String @unique
+  floor    Int
+  size     Float
+  rooms    Int
+  status   ApartmentStatus @default(OCCUPIED)
+  monthlyFee Float @default(2500)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  owner    User   @relation(fields: [ownerId], references: [id])
+  ownerId  String
+  bills    Bill[]
+  maintenanceRequests MaintenanceRequest[]
+
+  @@map("apartments")
+}
+
+model Bill {
+  id          String     @id @default(cuid())
+  amount      Float
+  dueDate     DateTime
+  issueDate   DateTime   @default(now())
+  status      BillStatus @default(PENDING)
+  type        BillType   @default(MONTHLY)
+  description String
+  paidDate    DateTime?
+  paymentMethod String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  // Relations
+  apartment   Apartment @relation(fields: [apartmentId], references: [id])
+  apartmentId String
+  owner       User      @relation(fields: [ownerId], references: [id])
+  ownerId     String
+
+  @@map("bills")
+}
+
+model Expense {
+  id          String        @id @default(cuid())
+  description String
+  amount      Float
+  category    String
+  vendor      String
+  status      ExpenseStatus @default(PENDING)
+  receiptUrl  String?
+  approvedBy  String?
+  date        DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  createdBy   User   @relation(fields: [createdById], references: [id])
+  createdById String
+
+  @@map("expenses")
+}
+
+model MaintenanceRequest {
+  id          String              @id @default(cuid())
+  title       String
+  description String
+  priority    Priority            @default(MEDIUM)
+  status      MaintenanceStatus   @default(NEW)
+  category    String
+  estimatedCost Float?
+  actualCost    Float?
+  assignedTo    String?
+  images        String[]
+  notes         String?
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  completedAt   DateTime?
+
+  // Relations
+  apartment     Apartment @relation(fields: [apartmentId], references: [id])
+  apartmentId   String
+  requester     User      @relation(fields: [requesterId], references: [id])
+  requesterId   String
+
+  @@map("maintenance_requests")
+}
+
+model Announcement {
+  id            String              @id @default(cuid())
+  title         String
+  content       String
+  priority      Priority            @default(MEDIUM)
+  category      String
+  isPinned      Boolean             @default(false)
+  isActive      Boolean             @default(true)
+  targetAudience AnnouncementTarget @default(ALL)
+  targetFloor   Int?
+  attachments   String[]
+  views         Int                 @default(0)
+  expiryDate    DateTime?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  // Relations
+  author        User   @relation(fields: [authorId], references: [id])
+  authorId      String
+
+  @@map("announcements")
+}
+
+model Meeting {
+  id          String        @id @default(cuid())
+  title       String
+  description String
+  date        DateTime
+  time        String
+  location    String
+  type        MeetingType   @default(GENERAL)
+  status      MeetingStatus @default(SCHEDULED)
+  agenda      String[]
+  documents   String[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relations
+  attendances MeetingAttendance[]
+  votes       MeetingVote[]
+
+  @@map("meetings")
+}
+
+model MeetingAttendance {
+  id        String   @id @default(cuid())
+  attended  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  meeting   Meeting @relation(fields: [meetingId], references: [id])
+  meetingId String
+  user      User    @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@unique([meetingId, userId])
+  @@map("meeting_attendances")
+}
+
+model MeetingVote {
+  id        String   @id @default(cuid())
+  question  String
+  options   String[]
+  results   Json?
+  status    VoteStatus @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  meeting   Meeting @relation(fields: [meetingId], references: [id])
+  meetingId String
+  votes     Vote[]
+
+  @@map("meeting_votes")
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  option    String
+  createdAt DateTime @default(now())
+
+  // Relations
+  user         User        @relation(fields: [userId], references: [id])
+  userId       String
+  meetingVote  MeetingVote @relation(fields: [meetingVoteId], references: [id])
+  meetingVoteId String
+
+  @@unique([userId, meetingVoteId])
+  @@map("votes")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  title     String
+  message   String
+  type      NotificationType @default(INFO)
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  // Relations
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+
+  @@map("notifications")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  OWNER
+  TENANT
+  ACCOUNTANT
+  SERVICE_PROVIDER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum ApartmentStatus {
+  OCCUPIED
+  VACANT
+  MAINTENANCE
+}
+
+enum BillStatus {
+  PAID
+  PENDING
+  OVERDUE
+}
+
+enum BillType {
+  MONTHLY
+  MAINTENANCE
+  SPECIAL
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  PAID
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  NEW
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum AnnouncementTarget {
+  ALL
+  OWNERS
+  TENANTS
+  SPECIFIC_FLOOR
+}
+
+enum MeetingType {
+  GENERAL
+  EMERGENCY
+  COMMITTEE
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum VoteStatus {
+  ACTIVE
+  CLOSED
+}
+
+enum NotificationType {
+  INFO
+  WARNING
+  SUCCESS
+  ERROR
+}
