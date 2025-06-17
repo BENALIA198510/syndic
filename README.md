@@ -76,9 +76,11 @@ npm install
 # إنشاء ملف البيئة
 cp .env.example .env
 
-# تحديث متغيرات قاعدة البيانات في .env
+# تحديث متغيرات البيئة في .env
 DATABASE_URL="postgresql://username:password@host:port/database"
 DIRECT_URL="postgresql://username:password@host:port/database"
+JWT_SECRET="your-secret-key"
+NODE_ENV=development
 
 # إنشاء قاعدة البيانات
 npx prisma db push
@@ -90,6 +92,16 @@ npm run db:seed
 4. **تشغيل التطبيق**
 ```bash
 npm run dev
+```
+
+5. **بناء النسخة النهائية**
+```bash
+npm run build
+```
+
+6. **معاينة النسخة النهائية**
+```bash
+npm run preview
 ```
 
 ## بيانات تسجيل الدخول التجريبية
@@ -128,7 +140,7 @@ src/
 
 ## الترخيص
 
-هذا المشروع مرخص تحت رخصة MIT.
+هذا المشروع مرخص تحت رخصة MIT. راجع ملف `LICENSE` للمزيد من التفاصيل.
 
 ## الدعم
 
